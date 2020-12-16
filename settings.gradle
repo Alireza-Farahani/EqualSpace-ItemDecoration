@@ -1,0 +1,3 @@
+include ':marginitemdecorator'
+include ':app'
+rootProject.name = "MarginItemDecorator"
