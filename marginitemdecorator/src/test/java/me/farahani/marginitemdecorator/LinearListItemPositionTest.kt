@@ -1,7 +1,7 @@
 package me.farahani.marginitemdecorator
 
 import com.google.common.truth.Truth
-import me.farahani.marginitemdecorator.MarginItemDecorator.LinearListItemPositionImpl
+import me.farahani.marginitemdecorator.MarginItemDecorator.LinearLayoutMarginFormula
 import me.farahani.marginitemdecorator.MarginItemDecorator.ListItemParams
 import org.junit.Before
 import org.junit.Test
@@ -10,7 +10,7 @@ import org.junit.runners.Parameterized
 
 @RunWith(Parameterized::class)
 internal class IsAtScrollingStart(private val params: ListItemParams, private val result: Boolean) {
-    private lateinit var positionFinder: LinearListItemPositionImpl
+    private lateinit var positionFinder: LinearLayoutMarginFormula
 
     @Before
     fun setUp() {
@@ -42,7 +42,7 @@ internal class IsAtScrollingStart(private val params: ListItemParams, private va
 
 @RunWith(Parameterized::class)
 internal class IsAtScrollingEnd(private val params: ListItemParams, private val result: Boolean) {
-    private lateinit var positionFinder: LinearListItemPositionImpl
+    private lateinit var positionFinder: LinearLayoutMarginFormula
 
     @Before
     fun setUp() {
@@ -76,7 +76,7 @@ internal class IsAtScrollingEnd(private val params: ListItemParams, private val 
 
 @RunWith(Parameterized::class)
 internal class IsAtSideStart(private val params: ListItemParams, private val result: Boolean) {
-    private lateinit var positionFinder: LinearListItemPositionImpl
+    private lateinit var positionFinder: LinearLayoutMarginFormula
 
     @Before
     fun setUp() {
@@ -109,7 +109,7 @@ internal class IsAtSideStart(private val params: ListItemParams, private val res
 
 @RunWith(Parameterized::class)
 internal class IsAtSideEnd(private val params: ListItemParams, private val result: Boolean) {
-    private lateinit var positionFinder: LinearListItemPositionImpl
+    private lateinit var positionFinder: LinearLayoutMarginFormula
 
     @Before
     fun setUp() {

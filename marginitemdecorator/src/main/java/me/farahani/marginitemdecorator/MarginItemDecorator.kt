@@ -2,39 +2,28 @@ package me.farahani.marginitemdecorator
 
 import android.graphics.Rect
 import android.view.View
-import android.widget.LinearLayout.HORIZONTAL
 import android.widget.LinearLayout.VERTICAL
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.Orientation
-import me.farahani.marginitemdecorator.MarginItemDecorator.Direction.*
 import kotlin.math.ceil
 
 /**
  * @author Alireza Farahani. Contact me at ar.d.farahani@gmail.com
  *
  * @param margin Margin/Gap/Space between items in pixel
- * @param spanCount Number of LayoutManager spans (column for vertical layout, rows for horizontal)
- * @param orientation LayoutManager orientation. One of [VERTICAL] or [HORIZONTAL]
+ * @param includeEdge if true, border items adhere to RecyclerView sides
  */
 class MarginItemDecorator(
     private val margin: Int,
-    private val spanCount: Int,
-    @Orientation private val orientation: Int,
     private val includeEdge: Boolean
 ) : RecyclerView.ItemDecoration() {
 
+    internal data class Margin(val top: Int, val right: Int, val bottom: Int, val left: Int)
+
     init {
-        require(spanCount >= 1) { "Span count must be greater than zero" }
         require(margin >= 0) { "Item margins can not be negative" }
     }
-
-    // LTR = 0, RTL = 1, Horizontal = 0, Vertical = 1
-    private val strategies = arrayOf(
-        HorizontalLTRStrategy(),
-        HorizontalRTLStrategy(),
-        VerticalLTRStrategy(),
-        VerticalRTLStrategy(),
-    )
 
     override fun getItemOffsets(
         outRect: Rect,
@@ -46,93 +35,122 @@ class MarginItemDecorator(
             parent.adapter?.itemCount ?: throw IllegalStateException("Adapter must not be null")
         val itemPosition = parent.getChildAdapterPosition(view)
         val layoutDirection = parent.layoutDirection
+        val sideSize = if (layoutDirection == VERTICAL) view.width else view.height
+        val (spans, orientation) = with(parent.layoutManager!!) {
+            when (this) {
+                is GridLayoutManager -> Pair(this.spanCount, this.orientation) // grid is itself a linear!
+                is LinearLayoutManager -> Pair(1, this.orientation)
+                else -> throw IllegalArgumentException("For now, only LinearLayout and GridLayout managers are supported")
+            }
+        }
 
-        setItemMargin(outRect, itemCount, itemPosition, layoutDirection, includeEdge)
-    }
-
-    internal fun setItemMargin(
-        outRect: Rect,
-        itemPosition: Int,
-        itemCount: Int,
-        layoutDirection: Int,
-        includeEdge: Boolean,
-    ): Rect {
-        val strategy: LinearListMarginStrategy = findProperStrategy(
+        val params = DecorationParams(
+            itemCount = itemCount,
+            itemPosition = itemPosition,
+            spanCount = spans,
+            itemSideSize = sideSize,
             layoutDirection = layoutDirection,
             orientation = orientation
         )
+        setItemMargin(outRect, params, includeEdge)
+    }
 
-        outRect.left = margin / 2
-        outRect.right = margin / 2
-        outRect.top = margin / 2
-        outRect.bottom = margin / 2
+    @Suppress("LocalVariableName")
+    private fun setItemMargin(
+        outRect: Rect,
+        params: DecorationParams,
+        includeEdge: Boolean,
+    ): Rect {
 
-        val borderMargin = if (includeEdge) margin else 0
+        val (top, right, bottom, left) = LinearLayoutMarginFormula.apply {
+            updateItem(params, margin, includeEdge)
+        }.calculate()
 
-        val params = ListItemParams(
-            itemPosition, spanCount, itemCount
-        )
-
-        val itemPositionFinder: LinearListItemPosition = LinearListItemPositionImpl()
-
-        if (itemPositionFinder.isAtScrollingStart(params))
-            setRectMargin(outRect, borderMargin, strategy.scrollingStart())
-        if (itemPositionFinder.isAtScrollingEnd(params))
-            setRectMargin(outRect, borderMargin, strategy.scrollingEnd())
-        if (itemPositionFinder.isAtSideStart(params))
-            setRectMargin(outRect, borderMargin, strategy.sideStart())
-        if (itemPositionFinder.isAtSideEnd(params))
-            setRectMargin(outRect, borderMargin, strategy.sideEnd())
-
+        outRect.top = top
+        outRect.right = right
+        outRect.bottom = bottom
+        outRect.left = left
         return outRect
     }
 
-    private fun setRectMargin(rect: Rect, margin: Int, direction: Direction) {
-        when (direction) {
-            Top -> rect.top = margin
-            Right -> rect.right = margin
-            Bottom -> rect.bottom = margin
-            Left -> rect.left = margin
-        }
-    }
-
-    internal fun findProperStrategy(
-        layoutDirection: Int,
-        orientation: Int
-    ): LinearListMarginStrategy {
-        return strategies[layoutDirection + (2*orientation)]
-    }
-
-    internal enum class Direction {
-        Top, Right, Bottom, Left
-    }
+    internal data class DecorationParams(
+        val itemCount: Int,
+        val itemPosition: Int,
+        val spanCount: Int,
+        val itemSideSize: Int,
+        val layoutDirection: Int,
+        val orientation: Int,
+    )
 
     // -----------------------------------------------------------------
 
-    internal interface LinearListItemPosition {
-        fun isAtScrollingStart(param: ListItemParams): Boolean
-        fun isAtScrollingEnd(param: ListItemParams): Boolean
-        fun isAtSideStart(param: ListItemParams): Boolean
-        fun isAtSideEnd(param: ListItemParams): Boolean
-    }
+    private object LinearLayoutMarginFormula {
 
-    internal class LinearListItemPositionImpl : LinearListItemPosition {
-        override fun isAtScrollingStart(param: ListItemParams): Boolean {
-            return param.itemPosition < param.spanCount
+        private fun findProperStrategy(
+            layoutDirection: Int,
+            orientation: Int
+        ): LinearListVariation {
+            return listVariations[layoutDirection + (2 * orientation)]
         }
 
-        override fun isAtScrollingEnd(param: ListItemParams): Boolean {
-            return row(param.itemPosition, param.spanCount) ==
-                    rows(param.itemCount, param.spanCount)
+        private var includeEdge: Boolean = false
+        private var margin = 0
+        private lateinit var params: DecorationParams
+
+        // LTR = 0, RTL = 1, Horizontal = 0, Vertical = 1
+        private val listVariations = arrayOf(
+            HorizontalLTR(),
+            HorizontalRTL(),
+            VerticalLTR(),
+            VerticalRTL(),
+        )
+
+        fun updateItem(params: DecorationParams, margin: Int, includeEdge: Boolean) {
+            this.params = params
+            this.margin = margin
+            this.includeEdge = includeEdge
         }
 
-        override fun isAtSideStart(param: ListItemParams): Boolean {
-            return param.itemPosition % param.spanCount == 0
+        fun calculate(): Margin {
+            val borderMargin = if (includeEdge) margin else 0
+            val numberOfMargins = params.spanCount + (if (includeEdge) 1 else -1)
+            val itemLayoutWidth = params.itemSideSize - ((numberOfMargins * margin) / params.spanCount)
+
+            val top = topMargin(borderMargin)
+            val left = leftMargin(params.itemSideSize, itemLayoutWidth, borderMargin)
+            val right = rightMargin(params.itemSideSize, itemLayoutWidth, left)
+            val bottom = bottomMargin(borderMargin)
+
+            val list: LinearListVariation = findProperStrategy(
+                layoutDirection = params.layoutDirection,
+                orientation = params.orientation
+            )
+            return list.adaptVerticalLtrMargin(Margin(top, right, bottom, left))
         }
 
-        override fun isAtSideEnd(param: ListItemParams): Boolean {
-            return param.itemCount == 1 || param.itemPosition % param.spanCount == (param.spanCount - 1)
+        private fun leftMargin(itemWidth: Int, layoutWidth: Int, borderMargin: Int): Int {
+            fun spanIdx() = params.itemPosition % params.spanCount
+
+            return spanIdx() * (margin + layoutWidth - itemWidth) + borderMargin
         }
+
+        fun topMargin(borderMargin: Int): Int {
+            fun isAtTop() = params.itemPosition < params.spanCount
+
+            return if (isAtTop()) borderMargin else (margin / 2) // parantez baraye margin/2 !!!
+        }
+
+        fun rightMargin(itemWidth: Int, layoutWidth: Int, leftMargin: Int): Int {
+            return itemWidth - layoutWidth - leftMargin
+        }
+
+        fun bottomMargin(borderMargin: Int): Int {
+            fun isAtBottom() = row(params.itemPosition, params.spanCount) ==
+                    rows(params.itemCount, params.spanCount)
+
+            return if (isAtBottom()) borderMargin else (margin / 2)
+        }
+
 
         private fun row(position: Int, spanCount: Int): Int {
             return ceil((position + 1).toFloat() / spanCount.toFloat()).toInt()
@@ -141,43 +159,41 @@ class MarginItemDecorator(
         private fun rows(itemCount: Int, spanCount: Int): Int {
             return ceil(itemCount.toFloat() / spanCount.toFloat()).toInt()
         }
-    }
 
-    internal interface LinearListMarginStrategy {
-        fun scrollingStart(): Direction
-        fun scrollingEnd(): Direction
-        fun sideStart(): Direction
-        fun sideEnd(): Direction
-    }
 
-    internal class HorizontalLTRStrategy : LinearListMarginStrategy {
-        override fun scrollingStart() = Left
-        override fun scrollingEnd() = Right
-        override fun sideStart() = Top
-        override fun sideEnd() = Bottom
-    }
-    internal class HorizontalRTLStrategy : LinearListMarginStrategy {
-        override fun scrollingStart() = Right
-        override fun scrollingEnd() = Left
-        override fun sideStart() = Top
-        override fun sideEnd() = Bottom
-    }
-    internal class VerticalLTRStrategy : LinearListMarginStrategy {
-        override fun scrollingStart() = Top
-        override fun scrollingEnd() = Bottom
-        override fun sideStart() = Left
-        override fun sideEnd() = Right
-    }
-    internal class VerticalRTLStrategy : LinearListMarginStrategy {
-        override fun scrollingStart() = Top
-        override fun scrollingEnd() = Bottom
-        override fun sideStart() = Right
-        override fun sideEnd() = Left
-    }
+        interface LinearListVariation {
+            fun adaptVerticalLtrMargin(margin: Margin): Margin
+        }
 
-    internal data class ListItemParams(
-        val itemPosition: Int,
-        val spanCount: Int,
-        val itemCount: Int,
-    )
+        class VerticalLTR : LinearListVariation {
+            override fun adaptVerticalLtrMargin(margin: Margin) = margin
+        }
+
+        class VerticalRTL : LinearListVariation {
+            override fun adaptVerticalLtrMargin(margin: Margin) = Margin(
+                top = margin.top,
+                right = margin.left,
+                bottom = margin.bottom,
+                left = margin.right
+            )
+        }
+
+        class HorizontalLTR : LinearListVariation {
+            override fun adaptVerticalLtrMargin(margin: Margin) = Margin(
+                top = margin.left,
+                right = margin.bottom,
+                bottom = margin.right,
+                left = margin.top
+            )
+        }
+
+        class HorizontalRTL : LinearListVariation {
+            override fun adaptVerticalLtrMargin(margin: Margin) = Margin(
+                top = margin.left,
+                right = margin.top,
+                bottom = margin.right,
+                left = margin.bottom
+            )
+        }
+    }
 }

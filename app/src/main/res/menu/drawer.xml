@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="HardcodedText">
+    <group >
+        <item
+            android:id="@+id/orientation"
+            android:title="Orientation"
+            app:actionViewClass="androidx.appcompat.widget.AppCompatSpinner" />
+        <item
+            android:id="@+id/spans"
+            android:title="Spans"
+            app:actionViewClass="androidx.appcompat.widget.AppCompatSpinner" />
+        <item
+            android:id="@+id/manager"
+            android:title="Layout Manager"
+            app:actionViewClass="androidx.appcompat.widget.AppCompatSpinner" />
+        <item
+            android:id="@+id/rtl"
+            android:title="Rtl"
+            app:actionViewClass="androidx.appcompat.widget.SwitchCompat" />
+        <item
+            android:id="@+id/edge"
+            android:title="Include Edge"
+            app:actionViewClass="androidx.appcompat.widget.SwitchCompat" />
+    </group>
+    <item
+        android:id="@+id/update"
+        app:actionViewClass="androidx.appcompat.widget.AppCompatButton" />
+</menu>

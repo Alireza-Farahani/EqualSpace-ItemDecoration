@@ -1,8 +1,10 @@
 package me.farahani.marginitemdecorator
 
 import android.graphics.Rect
+import android.view.View
 import android.widget.LinearLayout
 import androidx.core.view.ViewCompat
+import androidx.recyclerview.widget.RecyclerView
 import com.google.common.truth.Truth.assertThat
 import me.farahani.marginitemdecorator.MarginItemDecorator.*
 import org.junit.Before
@@ -12,9 +14,11 @@ import org.junit.rules.ExpectedException
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
+import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 
 
-class MarginItemDecoratorExceptions {
+class MarginItemDecoratorExceptionsTest {
 
     @get:Rule
     var exceptionRule: ExpectedException = ExpectedException.none()
@@ -50,47 +54,47 @@ class MarginItemDecoratorTest(private val p: P, private val result: Margin) {
 
             // count < span (Edge case when RV is dimensions are WRAP_CONTENT
             arrayOf(
-                P(spans = 2, pos = 0, count = 1, orient = V, dir = ltr, true),
+                P(spans = 2, pos = 0, count = 1, orient = V, layDir = ltr, true),
                 Margin(8, 8, 8, 8),
             ),
             arrayOf(
-                P(spans = 3, pos = 0, count = 2, orient = H, dir = ltr, false),
+                P(spans = 3, pos = 0, count = 2, orient = H, layDir = ltr, false),
                 Margin(0, 0, 4, 0),
             ),
 
             // span 1
             arrayOf(
-                P(spans = 1, pos = 0, count = 1, orient = V, dir = ltr, true),
+                P(spans = 1, pos = 0, count = 1, orient = V, layDir = ltr, true),
                 Margin(8, 8, 8, 8),
             ),
             arrayOf(
-                P(spans = 1, pos = 0, count = 2, orient = V, dir = rtl, false),
+                P(spans = 1, pos = 0, count = 2, orient = V, layDir = rtl, false),
                 Margin(0, 0, 4, 0),
             ),
             arrayOf(
-                P(spans = 1, pos = 1, count = 2, orient = H, dir = ltr, false),
+                P(spans = 1, pos = 1, count = 2, orient = H, layDir = ltr, false),
                 Margin(0, 0, 0, 4),
             ),
             arrayOf(
-                P(spans = 1, pos = 1, count = 3, orient = H, dir = rtl, true),
+                P(spans = 1, pos = 1, count = 3, orient = H, layDir = rtl, true),
                 Margin(8, 4, 8, 4),
             ),
 
             // span >2
             arrayOf(
-                P(spans = 3, pos = 4, count = 7, orient = V, dir = rtl, false),
+                P(spans = 3, pos = 4, count = 7, orient = V, layDir = rtl, false),
                 Margin(4, 4, 4, 4),
             ),
             arrayOf(
-                P(spans = 3, pos = 3, count = 7, orient = V, dir = ltr, true),
+                P(spans = 3, pos = 3, count = 7, orient = V, layDir = ltr, true),
                 Margin(4, 4, 4, 8),
             ),
             arrayOf(
-                P(spans = 3, pos = 6, count = 7, orient = H, dir = ltr, false),
+                P(spans = 3, pos = 6, count = 7, orient = H, layDir = ltr, false),
                 Margin(0, 0, 4, 4),
             ),
             arrayOf(
-                P(spans = 3, pos = 2, count = 7, orient = H, dir = rtl, true),
+                P(spans = 3, pos = 2, count = 7, orient = H, layDir = rtl, true),
                 Margin(4, 8, 8, 4),
             ),
         )
@@ -106,7 +110,7 @@ class MarginItemDecoratorTest(private val p: P, private val result: Margin) {
     data class P(
         val spans: Int,
         val pos: Int, val count: Int,
-        val orient: Int, val dir: Int,
+        val orient: Int, val layDir: Int,
         val edge: Boolean
     )
 
@@ -115,13 +119,19 @@ class MarginItemDecoratorTest(private val p: P, private val result: Margin) {
     @Test
     fun `test margins are calculated correctly`() {
         val decorator = MarginItemDecorator(8, p.spans, p.orient, p.edge)
-        val res = decorator.setItemMargin(
-            rect,
-            itemPosition = p.pos, itemCount = p.count,
-            layoutDirection = p.dir,
-            includeEdge = p.edge
-        )
-        assertThat(result).isEqualTo(Margin(res.top, res.right, res.bottom, res.left))
+        val mockedView = Mockito.mock(View::class.java)
+        val mockedRVState = Mockito.mock(RecyclerView.State::class.java)
+
+        val mockedAdapter = Mockito.mock(RecyclerView.Adapter::class.java)
+        `when`(mockedAdapter.itemCount).thenReturn(p.count)
+
+        val mockedRV = Mockito.mock(RecyclerView::class.java)
+        `when`(mockedRV.adapter).thenReturn(mockedAdapter)
+        `when`(mockedRV.getChildAdapterPosition(mockedView)).thenReturn(p.pos)
+        `when`(mockedRV.layoutDirection).thenReturn(p.layDir)
+
+        decorator.getItemOffsets(rect, mockedView, mockedRV, mockedRVState)
+        assertThat(result).isEqualTo(Margin(rect.top, rect.right, rect.bottom, rect.left))
     }
 }
 
