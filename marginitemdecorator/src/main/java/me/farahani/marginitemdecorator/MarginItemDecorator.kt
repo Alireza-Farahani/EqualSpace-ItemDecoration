@@ -2,25 +2,39 @@ package me.farahani.marginitemdecorator
 
 import android.graphics.Rect
 import android.view.View
+import android.widget.LinearLayout.HORIZONTAL
+import android.widget.LinearLayout.VERTICAL
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.Orientation
+import me.farahani.marginitemdecorator.MarginItemDecorator.Direction.*
 import kotlin.math.ceil
 
 /**
- * @param margin Margin/Gap/Space in pixel
- * @
+ * @author Alireza Farahani. Contact me at ar.d.farahani@gmail.com
+ *
+ * @param margin Margin/Gap/Space between items in pixel
+ * @param spanCount Number of LayoutManager spans (column for vertical layout, rows for horizontal)
+ * @param orientation LayoutManager orientation. One of [VERTICAL] or [HORIZONTAL]
  */
 class MarginItemDecorator(
     private val margin: Int,
-    private val spanCount: Int = 1,
+    private val spanCount: Int,
     @Orientation private val orientation: Int,
-//    private val includeEdge: Boolean = true
+    private val includeEdge: Boolean
 ) : RecyclerView.ItemDecoration() {
 
     init {
         require(spanCount >= 1) { "Span count must be greater than zero" }
         require(margin >= 0) { "Item margins can not be negative" }
     }
+
+    // LTR = 0, RTL = 1, Horizontal = 0, Vertical = 1
+    private val strategies = arrayOf(
+        HorizontalLTRStrategy(),
+        HorizontalRTLStrategy(),
+        VerticalLTRStrategy(),
+        VerticalRTLStrategy(),
+    )
 
     override fun getItemOffsets(
         outRect: Rect,
@@ -32,57 +46,93 @@ class MarginItemDecorator(
             parent.adapter?.itemCount ?: throw IllegalStateException("Adapter must not be null")
         val itemPosition = parent.getChildAdapterPosition(view)
         val layoutDirection = parent.layoutDirection
-//        val orientation = findOrientation(
-//            parent.layoutManager ?: throw IllegalStateException("Adapter must not be null")
-//        )
-        setItemMargin(outRect, itemCount, itemPosition, layoutDirection)
+
+        setItemMargin(outRect, itemCount, itemPosition, layoutDirection, includeEdge)
     }
 
-    /*@Orientation
-    private fun findOrientation(layoutManager: RecyclerView.LayoutManager): Int {
-        return when (layoutManager) {
-            is LinearLayoutManager -> layoutManager.orientation // GridLM is child of Linear
-            is StaggeredGridLayoutManager -> layoutManager.orientation
-            else -> throw IllegalStateException("Only Linear, Grid and StaggeredGrid LayoutManagers are accepted")
-        }
-    }*/
-
-    interface Decorator {
-        fun isAtScrollingStart(itemPosition: Int, spanCount: Int): Boolean {
-            return itemPosition < spanCount
-        }
-
-        fun setScrollingStartMargin(rect: Rect, itemPosition: Int, spanCount: Int, margin: Int)
-
-        fun isAtScrollingEnd(itemPosition: Int, spanCount: Int, itemCount: Int): Boolean {
-            return row(itemPosition, spanCount) == rows(itemCount, spanCount)
-        }
-
-        fun setScrollingEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
+    internal fun setItemMargin(
+        outRect: Rect,
+        itemPosition: Int,
+        itemCount: Int,
+        layoutDirection: Int,
+        includeEdge: Boolean,
+    ): Rect {
+        val strategy: LinearListMarginStrategy = findProperStrategy(
+            layoutDirection = layoutDirection,
+            orientation = orientation
         )
 
-        fun isAtSideStart(itemPosition: Int, spanCount: Int): Boolean {
-            return itemPosition % spanCount == 0
-        }
+        outRect.left = margin / 2
+        outRect.right = margin / 2
+        outRect.top = margin / 2
+        outRect.bottom = margin / 2
 
-        fun setSideStartMargin(rect: Rect, itemPosition: Int, spanCount: Int, margin: Int)
+        val borderMargin = if (includeEdge) margin else 0
 
-        fun isAtSideEnd(itemPosition: Int, spanCount: Int, itemCount: Int): Boolean {
-            return itemCount == 1 || itemPosition % spanCount == (spanCount - 1)
-        }
-
-        fun setSideEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
+        val params = ListItemParams(
+            itemPosition, spanCount, itemCount
         )
+
+        val itemPositionFinder: LinearListItemPosition = LinearListItemPositionImpl()
+
+        if (itemPositionFinder.isAtScrollingStart(params))
+            setRectMargin(outRect, borderMargin, strategy.scrollingStart())
+        if (itemPositionFinder.isAtScrollingEnd(params))
+            setRectMargin(outRect, borderMargin, strategy.scrollingEnd())
+        if (itemPositionFinder.isAtSideStart(params))
+            setRectMargin(outRect, borderMargin, strategy.sideStart())
+        if (itemPositionFinder.isAtSideEnd(params))
+            setRectMargin(outRect, borderMargin, strategy.sideEnd())
+
+        return outRect
+    }
+
+    private fun setRectMargin(rect: Rect, margin: Int, direction: Direction) {
+        when (direction) {
+            Top -> rect.top = margin
+            Right -> rect.right = margin
+            Bottom -> rect.bottom = margin
+            Left -> rect.left = margin
+        }
+    }
+
+    internal fun findProperStrategy(
+        layoutDirection: Int,
+        orientation: Int
+    ): LinearListMarginStrategy {
+        return strategies[layoutDirection + (2*orientation)]
+    }
+
+    internal enum class Direction {
+        Top, Right, Bottom, Left
+    }
+
+    // -----------------------------------------------------------------
+
+    internal interface LinearListItemPosition {
+        fun isAtScrollingStart(param: ListItemParams): Boolean
+        fun isAtScrollingEnd(param: ListItemParams): Boolean
+        fun isAtSideStart(param: ListItemParams): Boolean
+        fun isAtSideEnd(param: ListItemParams): Boolean
+    }
+
+    internal class LinearListItemPositionImpl : LinearListItemPosition {
+        override fun isAtScrollingStart(param: ListItemParams): Boolean {
+            return param.itemPosition < param.spanCount
+        }
+
+        override fun isAtScrollingEnd(param: ListItemParams): Boolean {
+            return row(param.itemPosition, param.spanCount) ==
+                    rows(param.itemCount, param.spanCount)
+        }
+
+        override fun isAtSideStart(param: ListItemParams): Boolean {
+            return param.itemPosition % param.spanCount == 0
+        }
+
+        override fun isAtSideEnd(param: ListItemParams): Boolean {
+            return param.itemCount == 1 || param.itemPosition % param.spanCount == (param.spanCount - 1)
+        }
 
         private fun row(position: Int, spanCount: Int): Int {
             return ceil((position + 1).toFloat() / spanCount.toFloat()).toInt()
@@ -93,199 +143,41 @@ class MarginItemDecorator(
         }
     }
 
-    abstract class VerticalDecorator : Decorator {
-        override fun setScrollingStartMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            margin: Int
-        ) {
-            if (isAtScrollingStart(itemPosition, spanCount))
-                rect.top = margin
-        }
-
-        override fun setScrollingEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
-        ) {
-            if (isAtScrollingEnd(itemPosition, spanCount, itemCount))
-                rect.bottom = margin
-        }
+    internal interface LinearListMarginStrategy {
+        fun scrollingStart(): Direction
+        fun scrollingEnd(): Direction
+        fun sideStart(): Direction
+        fun sideEnd(): Direction
     }
 
-    class VerticalLTRDecorator : VerticalDecorator() {
-        override fun setSideStartMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            margin: Int
-        ) {
-            if (isAtSideStart(itemPosition, spanCount))
-                rect.left = margin
-        }
-
-        override fun setSideEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
-        ) {
-            if (isAtSideEnd(itemPosition, spanCount, itemCount))
-                rect.right = margin
-        }
+    internal class HorizontalLTRStrategy : LinearListMarginStrategy {
+        override fun scrollingStart() = Left
+        override fun scrollingEnd() = Right
+        override fun sideStart() = Top
+        override fun sideEnd() = Bottom
+    }
+    internal class HorizontalRTLStrategy : LinearListMarginStrategy {
+        override fun scrollingStart() = Right
+        override fun scrollingEnd() = Left
+        override fun sideStart() = Top
+        override fun sideEnd() = Bottom
+    }
+    internal class VerticalLTRStrategy : LinearListMarginStrategy {
+        override fun scrollingStart() = Top
+        override fun scrollingEnd() = Bottom
+        override fun sideStart() = Left
+        override fun sideEnd() = Right
+    }
+    internal class VerticalRTLStrategy : LinearListMarginStrategy {
+        override fun scrollingStart() = Top
+        override fun scrollingEnd() = Bottom
+        override fun sideStart() = Right
+        override fun sideEnd() = Left
     }
 
-    class VerticalRTLDecorator : VerticalDecorator() {
-        override fun setSideStartMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            margin: Int
-        ) {
-            if (isAtSideStart(itemPosition, spanCount))
-                rect.right = margin
-        }
-
-        override fun setSideEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
-        ) {
-            if (isAtSideEnd(itemPosition, spanCount, itemCount))
-                rect.left = margin
-        }
-    }
-
-    abstract class HorizontalDecorator : Decorator {
-        override fun setSideStartMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            margin: Int
-        ) {
-            if (isAtSideStart(itemPosition, spanCount))
-                rect.top = margin
-        }
-
-        override fun setSideEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
-        ) {
-            if (isAtSideEnd(itemPosition, spanCount, itemCount))
-                rect.bottom = margin
-        }
-    }
-
-    class HorizontalLTRDecorator : HorizontalDecorator() {
-        override fun setScrollingStartMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            margin: Int
-        ) {
-            if (isAtScrollingStart(itemPosition, spanCount))
-                rect.left = margin
-        }
-
-        override fun setScrollingEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
-        ) {
-            if (isAtScrollingEnd(itemPosition, spanCount, itemCount))
-                rect.right = margin
-        }
-
-    }
-
-    class HorizontalRTLDecorator : HorizontalDecorator() {
-
-        override fun setScrollingStartMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            margin: Int
-        ) {
-            if (isAtScrollingStart(itemPosition, spanCount))
-                rect.right = margin
-        }
-
-        override fun setScrollingEndMargin(
-            rect: Rect,
-            itemPosition: Int,
-            spanCount: Int,
-            itemCount: Int,
-            margin: Int
-        ) {
-            if (isAtScrollingEnd(itemPosition, spanCount, itemCount))
-                rect.left = margin
-        }
-    }
-
-    internal fun setItemMargin(
-        outRect: Rect,
-        itemPosition: Int,
-        itemCount: Int,
-        layoutDirection: Int
-    ): Rect {
-        require(itemPosition < itemCount) { "position must be less than item count" }
-        val decorator: Decorator = findProperDecorator(
-            layoutDirection = layoutDirection,
-            orientation = orientation
-        )
-//        val isRTL = layoutDirection == ViewCompat.LAYOUT_DIRECTION_RTL
-//        val isAtStart = itemPosition % spanCount == 0
-//        val isAtEnd = itemPosition % spanCount == (spanCount - 1)
-//        val isAtTop = itemPosition < spanCount
-//        val isAtBottom = row(itemPosition, spanCount) == rows(itemCount, spanCount)
-
-        outRect.left = margin / 2
-        outRect.right = margin / 2
-        outRect.top = margin / 2
-        outRect.bottom = margin / 2
-
-        decorator.setScrollingStartMargin(outRect, itemPosition, spanCount, margin)
-        decorator.setScrollingEndMargin(outRect, itemPosition, spanCount, itemCount, margin)
-        decorator.setSideStartMargin(outRect, itemPosition, spanCount, margin)
-        decorator.setSideEndMargin(outRect, itemPosition, spanCount, itemCount, margin)
-//        if (decorator.isAtScrollingStart(itemPosition, ))
-//            outRect.top = spacing
-//
-//        if (isAtBottom)
-//            outRect.bottom = spacing
-//
-//        if (isAtStart)
-//            if (isRTL) outRect.right = spacing
-//            else outRect.left = spacing
-//
-//        if (isAtEnd)
-//            if (isRTL) outRect.left = spacing
-//            else outRect.right = spacing
-
-        return outRect
-    }
-
-    // LTR = 0, RTL = 1, Horizontal = 0, Vertical = 1
-    private val decorators = arrayOf(
-        HorizontalLTRDecorator(),
-        HorizontalRTLDecorator(),
-        VerticalLTRDecorator(),
-        VerticalRTLDecorator(),
+    internal data class ListItemParams(
+        val itemPosition: Int,
+        val spanCount: Int,
+        val itemCount: Int,
     )
-
-    private fun findProperDecorator(layoutDirection: Int, orientation: Int): Decorator {
-        return decorators[layoutDirection + 2 * orientation]
-    }
-
 }
