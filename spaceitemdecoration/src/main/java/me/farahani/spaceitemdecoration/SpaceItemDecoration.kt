@@ -19,8 +19,6 @@ class SpaceItemDecoration(
     private val includeEdge: Boolean
 ) : RecyclerView.ItemDecoration() {
 
-    internal data class Margin(val top: Int, val right: Int, val bottom: Int, val left: Int)
-
     init {
         require(space >= 0) { "Space between items can not be negative" }
     }
@@ -38,7 +36,10 @@ class SpaceItemDecoration(
         val sideSize = if (layoutDirection == VERTICAL) view.width else view.height
         val (spans, orientation) = with(parent.layoutManager!!) {
             when (this) {
-                is GridLayoutManager -> Pair(this.spanCount, this.orientation) // grid is itself a linear!
+                is GridLayoutManager -> Pair(
+                    this.spanCount,
+                    this.orientation
+                ) // grid is itself a linear!
                 is LinearLayoutManager -> Pair(1, this.orientation)
                 else -> throw IllegalArgumentException("For now, only LinearLayout and GridLayout managers are supported")
             }
@@ -55,12 +56,7 @@ class SpaceItemDecoration(
         setItemMargin(outRect, params, includeEdge)
     }
 
-    @Suppress("LocalVariableName")
-    private fun setItemMargin(
-        outRect: Rect,
-        params: DecorationParams,
-        includeEdge: Boolean,
-    ): Rect {
+    private fun setItemMargin(outRect: Rect, params: DecorationParams, includeEdge: Boolean): Rect {
 
         val (top, right, bottom, left) = LinearLayoutMarginFormula.apply {
             updateItem(params, space, includeEdge)
@@ -84,9 +80,11 @@ class SpaceItemDecoration(
 
     // -----------------------------------------------------------------
 
+    internal data class Margin(val top: Int, val right: Int, val bottom: Int, val left: Int)
+
     private object LinearLayoutMarginFormula {
 
-        private fun findProperStrategy(
+        private fun findCorrectListVariation(
             layoutDirection: Int,
             orientation: Int
         ): LinearListVariation {
@@ -114,14 +112,15 @@ class SpaceItemDecoration(
         fun calculate(): Margin {
             val borderMargin = if (includeEdge) margin else 0
             val numberOfMargins = params.spanCount + (if (includeEdge) 1 else -1)
-            val itemLayoutWidth = params.itemSideSize - ((numberOfMargins * margin) / params.spanCount)
+            val itemLayoutWidth =
+                params.itemSideSize - ((numberOfMargins * margin) / params.spanCount)
 
             val top = topMargin(borderMargin)
             val left = leftMargin(params.itemSideSize, itemLayoutWidth, borderMargin)
             val right = rightMargin(params.itemSideSize, itemLayoutWidth, left)
             val bottom = bottomMargin(borderMargin)
 
-            val list: LinearListVariation = findProperStrategy(
+            val list: LinearListVariation = findCorrectListVariation(
                 layoutDirection = params.layoutDirection,
                 orientation = params.orientation
             )
@@ -137,7 +136,7 @@ class SpaceItemDecoration(
         fun topMargin(borderMargin: Int): Int {
             fun isAtTop() = params.itemPosition < params.spanCount
 
-            return if (isAtTop()) borderMargin else (margin / 2) // parantez baraye margin/2 !!!
+            return if (isAtTop()) borderMargin else (margin / 2)
         }
 
         fun rightMargin(itemWidth: Int, layoutWidth: Int, leftMargin: Int): Int {
