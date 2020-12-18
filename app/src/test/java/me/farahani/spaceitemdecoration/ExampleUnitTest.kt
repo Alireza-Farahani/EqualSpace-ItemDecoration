@@ -1,4 +1,4 @@
-package me.farahani.marginitemdecorator
+package me.farahani.spaceitemdecoration
 
 import org.junit.Test
 

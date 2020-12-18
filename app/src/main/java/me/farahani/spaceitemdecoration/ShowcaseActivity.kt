@@ -1,4 +1,4 @@
-package me.farahani.marginitemdecorator
+package me.farahani.spaceitemdecoration
 
 import android.annotation.SuppressLint
 import android.content.Context

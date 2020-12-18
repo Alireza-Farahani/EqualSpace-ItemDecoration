@@ -13,7 +13,7 @@ recyclerView.addItemDecoration(SpaceItemDecoration(space /*in Px*/, includeEdge)
 ![Demo](graphics/SpaceItemDecoration_300x533.gif)
 
 All of code is in a single file of 
-[SpaceItemDecoration](marginitemdecorator/src/main/java/me/farahani/marginitemdecorator/SpaceItemDecoration.kt), 
+[SpaceItemDecoration](spaceitemdecoration/src/main/java/me/farahani/spaceitemdecoration/SpaceItemDecoration.kt), 
 feel free to copy/paste it in your code.
 
 ### Can I used it for StaggeredGridLayout?

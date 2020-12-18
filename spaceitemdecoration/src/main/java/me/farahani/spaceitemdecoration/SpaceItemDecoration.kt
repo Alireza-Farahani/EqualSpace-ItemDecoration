@@ -1,4 +1,4 @@
-package me.farahani.marginitemdecorator
+package me.farahani.spaceitemdecoration
 
 import android.graphics.Rect
 import android.view.View
