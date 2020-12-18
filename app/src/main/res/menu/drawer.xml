@@ -27,5 +27,6 @@
     </group>
     <item
         android:id="@+id/update"
-        app:actionViewClass="androidx.appcompat.widget.AppCompatButton" />
+        app:actionViewClass="androidx.appcompat.widget.AppCompatButton"
+        tools:ignore="MenuTitle" />
 </menu>
