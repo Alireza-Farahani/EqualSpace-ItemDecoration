@@ -3,7 +3,7 @@ An RecyclerView which places equal Space/Gap/Margin between RecyclerView Items. 
 
 How to use
 -----
-In you root build.gradle file, add JitPack to "repositories" block
+In you root build.gradle file, add JitPack to "repositories" block:
 ```groovy
 allprojects {
     repositories {
@@ -11,18 +11,18 @@ allprojects {
     }
 }
 ```
-and in your app module add this library to the dependencies block
+and in your app module add this library to the dependencies block:
 ```groovy
 dependencies {
     compile 'me.farahani.spaceitemdecoration:spaceitemdecoration:1.0'
 }    
 ```
-
+and in your code:
 ```kotlin
 val recyclerView = //...
-val space = //
+val space = // in Px
 val includeEdge = // false if you want no space between border items and recyclerView
-recyclerView.addItemDecoration(SpaceItemDecoration(space /*in Px*/, includeEdge))
+recyclerView.addItemDecoration(SpaceItemDecoration(space, includeEdge))
 ```
 
 ![Demo](graphics/SpaceItemDecoration_300x533.gif)
