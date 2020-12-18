@@ -27,11 +27,7 @@ import androidx.recyclerview.widget.RecyclerView.VERTICAL
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.google.android.material.navigation.NavigationView
 
-/**
- * An example full-screen activity that shows and hides the system UI (i.e.
- * status bar and navigation/system bar) with user interaction.
- */
-class ShowcaseActivity : AppCompatActivity() {//, NavigationView.OnNavigationItemSelectedListener {
+class ShowcaseActivity : AppCompatActivity() {
 
     companion object {
         const val ITEM_SIZE = 120//dp
@@ -258,9 +254,6 @@ class ShowcaseActivity : AppCompatActivity() {//, NavigationView.OnNavigationIte
             super.onBackPressed()
         }
     }
-
-    // ----------------
-
 }
 
 enum class Orientation(val orientation: Int) {
