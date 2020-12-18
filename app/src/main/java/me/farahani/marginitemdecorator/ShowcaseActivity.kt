@@ -30,7 +30,7 @@ class ShowcaseActivity : AppCompatActivity() {
 
     companion object {
         const val ITEM_SIZE = 120//dp
-        const val MARGIN = 56//dp
+        const val MARGIN = 24//dp
     }
 
     private lateinit var drawer: DrawerLayout
