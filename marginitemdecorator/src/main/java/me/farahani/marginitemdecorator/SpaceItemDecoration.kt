@@ -11,18 +11,18 @@ import kotlin.math.ceil
 /**
  * @author Alireza Farahani. Contact me at ar.d.farahani@gmail.com
  *
- * @param margin Margin/Gap/Space between items in pixel
+ * @param space Space/Gap/Margin between items in pixel
  * @param includeEdge if true, border items adhere to RecyclerView sides
  */
-class MarginItemDecorator(
-    private val margin: Int,
+class SpaceItemDecoration(
+    private val space: Int,
     private val includeEdge: Boolean
 ) : RecyclerView.ItemDecoration() {
 
     internal data class Margin(val top: Int, val right: Int, val bottom: Int, val left: Int)
 
     init {
-        require(margin >= 0) { "Item margins can not be negative" }
+        require(space >= 0) { "Space between items can not be negative" }
     }
 
     override fun getItemOffsets(
@@ -63,7 +63,7 @@ class MarginItemDecorator(
     ): Rect {
 
         val (top, right, bottom, left) = LinearLayoutMarginFormula.apply {
-            updateItem(params, margin, includeEdge)
+            updateItem(params, space, includeEdge)
         }.calculate()
 
         outRect.top = top

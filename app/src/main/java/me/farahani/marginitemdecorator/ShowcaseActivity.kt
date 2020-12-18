@@ -24,7 +24,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.HORIZONTAL
 import androidx.recyclerview.widget.RecyclerView.VERTICAL
-import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.google.android.material.navigation.NavigationView
 
 class ShowcaseActivity : AppCompatActivity() {
@@ -188,7 +187,7 @@ class ShowcaseActivity : AppCompatActivity() {
             if (itemDecorationCount == 1)
                 removeItemDecorationAt(0)
             addItemDecoration(
-                MarginItemDecorator(
+                SpaceItemDecoration(
                     dpToPx(MARGIN),
                     Config.includeEdge
                 )
